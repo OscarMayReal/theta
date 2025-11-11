@@ -1,5 +1,35 @@
 import gtk from "@girs/node-gtk-4.0";
 import adw from "@girs/node-adw-1";
+import glib from "@girs/node-glib-2.0";
+
+function SidebarItem({
+    title,
+    subtitle,
+}: {
+    title: string;
+    subtitle?: string;
+}) {
+    const label = new gtk.Box({
+        orientation: gtk.Orientation.VERTICAL,
+        halign: gtk.Align.START,
+        valign: gtk.Align.CENTER,
+    });
+    const titleWidget = new gtk.Label({
+        label: title,
+        halign: gtk.Align.START,
+    });
+    titleWidget.setCssClasses(["heading"]);
+    label.append(titleWidget);
+    if (subtitle) {
+        const subtitleWidget = new gtk.Label({
+            label: subtitle,
+            halign: gtk.Align.START,
+        });
+        subtitleWidget.setCssClasses(["caption"]);
+        label.append(subtitleWidget);
+    }
+    return label;
+}
 
 const app = new adw.Application();
 app.on("activate", () => {
@@ -9,6 +39,7 @@ app.on("activate", () => {
         default_width: 200,
         default_height: 200,
     });
+    // win.setCssClasses(["devel"]);
     const headerBar = new adw.HeaderBar({
         title_widget: new adw.WindowTitle({
             title: "Hello World",
@@ -39,18 +70,38 @@ app.on("activate", () => {
         aboutwin.present();
     });
     headerBar.packEnd(button);
-    // const box = new gtk.Box({
-    //     orientation: gtk.Orientation.VERTICAL,
-    //     spacing: 6,
-    // });
-    // box.append(headerBar);
-    // win.setContent(box);
+    const box = new gtk.ListBox({
+        selection_mode: gtk.SelectionMode.NONE,
+        vexpand: false,
+        height_request: -1,
+    });
+    box.setCssClasses(["boxed-list"]);
+    const switchRow = new adw.SwitchRow({
+        title: "Dark Mode",
+        subtitle: "Enable dark mode",
+    });
+    box.append(switchRow);
     const toolbarView = new adw.ToolbarView({
-    
+        content: new adw.Clamp({
+            child: box,
+            vexpand: false,
+        }),
     });
     toolbarView.addTopBar(headerBar);
-    const sidebarToolbarView = new adw.ToolbarView({
+    const sidebarBox = new gtk.ListBox({
         
+    });
+    sidebarBox.setCssClasses(["navigation-sidebar"]);
+    sidebarBox.append(SidebarItem({
+        title: "Quntem Account",
+        subtitle: "Manage your Quntem account",
+    }));
+    sidebarBox.append(SidebarItem({
+        title: "Grid Management",
+        subtitle: "Manage device enrollment",
+    }));
+    const sidebarToolbarView = new adw.ToolbarView({
+        content: sidebarBox,
     });
     sidebarToolbarView.addTopBar(sidebarHeader);
     var navigationView = new adw.NavigationSplitView({
