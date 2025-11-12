@@ -136,6 +136,11 @@ body {
     background-color: var(--qu-background);
     color: var(--qu-text) !important;
     font-family: var(--font-figtree);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
 .header {
@@ -183,6 +188,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     height: 100%;
     width: 75%;
     margin-left: auto;
@@ -190,10 +196,10 @@ body {
 }
 
 .page-intro-subtitle-upper {
-    margin-top: 100px;
-    font-size: 22px;
+    /* margin-top: 75px; */
+    font-size: 20px;
     font-weight: 400;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     color: var(--qu-text-secondary);
 }
 
@@ -201,5 +207,78 @@ body {
     font-size: 35px;
     font-weight: 500;
 }
+
+.page-intro-subtitle-lower {
+    font-size: 20px;
+    font-weight: 400;
+    margin-top: 5px;
+    color: var(--qu-text-secondary);
+}
+
+.content {
+    height: calc(100vh - 50px);
+    width: 100%;
+    overflow-y: auto;
+    padding: 0px;
+}
+
+.page-intro-button-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.page-info-section {
+    padding: 30px 0px;
+    /* height: 300px; */
+    width: 100%;
+    border-top: 1px solid var(--qu-border-color);
+}
+
+.page-info-section-inner {
+    /* display: flex;
+    flex-direction: row; */
+    height: 100%;
+    width: 75%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.page-info-section-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.page-info-section-image {
+  margin-top: 25px;
+}
+
+.page-info-section-subtitle {
+    font-size: 16px;
+    font-weight: 400;
+    margin-bottom: 5px;
+    color: var(--qu-text-secondary);
+}
+
+.page-info-section-title {
+    font-size: 25px;
+    font-weight: 500;
+}
+
+.page-info-section-text {
+    font-size: 16px;
+    font-weight: 400;
+    margin-top: 5px;
+    color: var(--qu-text);
+}
+
 
 
