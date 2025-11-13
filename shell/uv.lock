@@ -1,0 +1,34 @@
+version = 1
+revision = 3
+requires-python = ">=3.11"
+
+[[package]]
+name = "pam"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-pam" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/65/25/74fcd42f6a76c7d06ca161c11a2455ddd4f68a76545241f7d3ea3354c6d6/pam-0.2.0-py3-none-any.whl", hash = "sha256:fcec42cee82e164b77fdf70c52117c668645c17d9756b3af66058816a5102401", size = 976, upload-time = "2020-11-11T23:11:01.769Z" },
+]
+
+[[package]]
+name = "python-pam"
+version = "2.0.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/da/879f1c849e886b783239b8a4710daac73535ba2cfcf672ee4548543e3a74/python-pam-2.0.2.tar.gz", hash = "sha256:97235235ba9b82dbae8068d1099508455949b275f77273ca22fdbd8b1fb5d950", size = 11439, upload-time = "2022-03-18T00:32:09.856Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9b/2d/9fbb3bd686a474d76fbd0b79abdcc016f3da760b1d1c2048bf4c611a4939/python_pam-2.0.2-py3-none-any.whl", hash = "sha256:4ac51dd8953ac59aa45505882b565eef6a22e0423dcf25d63369902080416c20", size = 10658, upload-time = "2022-03-18T00:32:07.802Z" },
+]
+
+[[package]]
+name = "shell"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "pam" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pam" }]
