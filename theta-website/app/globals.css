@@ -11,7 +11,14 @@
   --header-background: #ffffff;
   --qu-text-secondary: #999999;
   --qu-border-color: #e4e4e7;
+  --page-width: 75%;
   font-family: "Figtree", sans-serif;
+}
+
+@media screen and (max-width: 1024px) {
+  * {
+    --page-width: 90%;
+  }
 }
 
 @theme inline {
@@ -155,7 +162,7 @@ body {
   flex-direction: row;
   align-items: center;
   height: 50px;
-  width: 75%;
+  width: var(--page-width);
   margin-left: auto;
   margin-right: auto;
 }
@@ -180,8 +187,14 @@ body {
 }
 
 .page-intro-section {
-    height: 300px;
+    min-height: 300px;
     width: 100%;
+    padding-top: 30px;
+    padding-bottom: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .page-intro-section-inner {
@@ -190,7 +203,7 @@ body {
     align-items: center;
     justify-content: center;
     height: 100%;
-    width: 75%;
+    width: var(--page-width);
     margin-left: auto;
     margin-right: auto;
 }
@@ -201,11 +214,13 @@ body {
     font-weight: 400;
     margin-bottom: 5px;
     color: var(--qu-text-secondary);
+    text-align: center;
 }
 
 .page-intro-title {
     font-size: 35px;
     font-weight: 500;
+    text-align: center;
 }
 
 .page-intro-subtitle-lower {
@@ -213,6 +228,7 @@ body {
     font-weight: 400;
     margin-top: 5px;
     color: var(--qu-text-secondary);
+    text-align: center;
 }
 
 .content {
@@ -238,10 +254,11 @@ body {
 }
 
 .page-info-section-inner {
-    /* display: flex;
-    flex-direction: row; */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     height: 100%;
-    width: 75%;
+    width: var(--page-width);
     margin-left: auto;
     margin-right: auto;
 }
@@ -249,16 +266,27 @@ body {
 .page-info-section-content {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    /* align-items: center; */
     justify-content: center;
     height: 100%;
-    width: 100%;
+    width: 75%;
     margin-left: auto;
     margin-right: auto;
 }
 
-.page-info-section-image {
+/* .page-info-section-image {
   margin-top: 25px;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+} */
+
+.page-info-section-image {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 25%;
 }
 
 .page-info-section-subtitle {
@@ -266,11 +294,13 @@ body {
     font-weight: 400;
     margin-bottom: 5px;
     color: var(--qu-text-secondary);
+    text-align: left;
 }
 
 .page-info-section-title {
     font-size: 25px;
     font-weight: 500;
+    text-align: left;
 }
 
 .page-info-section-text {
@@ -278,6 +308,7 @@ body {
     font-weight: 400;
     margin-top: 5px;
     color: var(--qu-text);
+    text-align: left;
 }
 
 
