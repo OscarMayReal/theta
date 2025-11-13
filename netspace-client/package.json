@@ -1,0 +1,20 @@
+{
+  "name": "netspace-client",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.ts"
+  },
+  "dependencies": {
+    "@girs/adw-1": "^1.9.0-4.0.0-beta.38",
+    "@girs/node-adw-1": "^1.4.3-3.3.0",
+    "@girs/node-gdk-3.0": "^3.24.41-3.3.0",
+    "@girs/node-gtk-4.0": "^4.12.5-3.3.0",
+    "node-gtk": "^1.0.0"
+  }
+}
