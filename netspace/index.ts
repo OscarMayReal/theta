@@ -2,10 +2,16 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import fileUpload from "express-fileupload";
 
 const app = express();
 const port = 1526;
 const space = "netspace"
+
+app.use(fileUpload({
+    useTempFiles : true,
+    tempFileDir : '/tmp/'
+}));
 
 type ExposedShare = {
     name: string;
@@ -100,10 +106,27 @@ app.get("/cap/fileshare/share/:shareSlug/files", (req, res) => {
         return {
             name: file,
             path: path.join(share.path + "/" + location, file),
+            isDir: fs.lstatSync(path.join(share.path + "/" + location, file)).isDirectory(),
         };
     });
     res.json({
         files: formattedFiles,
+    });
+});
+
+app.post("/cap/fileshare/share/:shareSlug/upload", (req, res) => {
+    const shareSlug = req.params.shareSlug;
+    const share = exposedShares.find((share) => share.slug === shareSlug);
+    if (!share) {
+        res.status(404).json({ error: "Share not found" });
+        return;
+    }
+    const file = req.files.file;
+    const location = req.query.location || "";
+    const filePath = path.join(share.path + "/" + location, file.name);
+    file.mv(filePath);
+    res.json({
+        message: "File uploaded successfully",
     });
 });
 

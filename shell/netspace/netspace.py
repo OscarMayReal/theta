@@ -2,13 +2,15 @@ from email.header import Header
 import subprocess
 import pam
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QItemDelegate, QListView, QListWidget, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QHBoxLayout, QGraphicsView, QSizePolicy
+from PySide6.QtWidgets import QApplication, QItemDelegate, QListView, QListWidget, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QHBoxLayout, QGraphicsView, QSizePolicy, QMessageBox
 import pwd, os
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore, QtGui, QtWidgets
 import requests
 
 icon = QtGui.QIcon("/usr/share/icons/Adwaita/symbolic/devices/computer-symbolic.svg")
-FileIcon = QtGui.QIcon("/usr/share/icons/Adwaita/symbolic/places/folder-symbolic.svg")
+FileIcon = QtGui.QIcon("/usr/share/icons/Adwaita/symbolic/mimetypes/text-x-generic-symbolic.svg")
+FolderIcon = QtGui.QIcon("/usr/share/icons/Adwaita/symbolic/places/folder-symbolic.svg")
+ShareIcon = QtGui.QIcon("/usr/share/icons/Adwaita/symbolic/places/folder-publicshare-symbolic.svg")
 
 def SearchNetworkForDevices():
     devices = []
@@ -26,6 +28,16 @@ def getShares(device):
         return response.get('exposedShares', [])
     except Exception as e:
         print("Failed to get shares:", e)
+        return []
+
+def getShareFiles(device, share):
+    if not share:
+        return []
+    try:
+        response = requests.get(f"http://{device['hostname']}:1526/cap/fileshare/share/{share['slug']}/files", timeout=2).json()
+        return response.get('files', [])
+    except Exception as e:
+        print("Failed to get share files:", e)
         return []
 
 class DevicesModel(QtCore.QAbstractListModel):
@@ -53,7 +65,7 @@ class SharesModel(QtCore.QAbstractListModel):
     def __init__(self, device):
         super().__init__()
         shares = getShares(device)
-        self.shares = shares if shares else []  # ← never None
+        self.shares = shares if shares else []
 
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self.shares)
@@ -64,18 +76,64 @@ class SharesModel(QtCore.QAbstractListModel):
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
             return self.shares[index.row()]['name']
         if role == QtCore.Qt.ItemDataRole.DecorationRole:
-            return FileIcon
+            return ShareIcon
         if role == QtCore.Qt.ItemDataRole.UserRole:
             return self.shares[index.row()]
         return None
 
+def uploadFile(device, share, file):
+    try:
+        response = requests.post(f"http://{device['hostname']}:1526/cap/fileshare/share/{share['slug']}/upload", files={"file": file})
+        return response.json()
+    except Exception as e:
+        print("Failed to upload file:", e)
+        return None
+
+class FilesModel(QtCore.QAbstractListModel):
+    def __init__(self, device, share):
+        super().__init__()
+        self.device = device
+        self.share = share
+        files = getShareFiles(device, share)
+        self.files = files if files else []
+
+    def rowCount(self, parent=QtCore.QModelIndex()):
+        return len(self.files)
+
+    def data(self, index, role):
+        if not self.files or index.row() >= len(self.files):
+            return None
+        if role == QtCore.Qt.ItemDataRole.DisplayRole:
+            return self.files[index.row()]['name']
+        if role == QtCore.Qt.ItemDataRole.DecorationRole:
+            if self.files[index.row()]['isDir']:
+                return FolderIcon
+            return FileIcon
+        if role == QtCore.Qt.ItemDataRole.UserRole:
+            return self.files[index.row()]
+        return None
+
+    def uploadFile(self, file):
+        return uploadFile(self.device, self.share, file)
+
+    def reload(self):
+        self.files = getShareFiles(self.device, self.share)
+        self.layoutChanged.emit()
 
 class FileShareWindow(QWidget):
     def __init__(self, device):
         super().__init__()
         self.device = device
         self.shares = SharesModel(device)
+        self.share = None
+        self.files = FilesModel(device, self.share)
+        self.filesBrowser = QListView()
+        self.filesBrowser.setAcceptDrops(True)
+        self.filesBrowser.setDragDropMode(QtWidgets.QAbstractItemView.DropOnly)
+        self.filesBrowser.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        
         self.setWindowTitle("Theta NetSpace File Browser - " + device['hostname'])
+        self.setAcceptDrops(True)
 
         layout = QVBoxLayout()
 
@@ -100,12 +158,58 @@ class FileShareWindow(QWidget):
         sharesSidebar.setModel(self.shares)
         mainRow.addWidget(sharesSidebar)
 
-        filesBrowser = QListView()
-        filesBrowser.setStyleSheet("background-color: #ffffff;")
-        mainRow.addWidget(filesBrowser)
+        sharesSidebar.selectionModel().selectionChanged.connect(
+            lambda selected, deselected: self.shareSelected(selected, deselected)
+        )
+
+        self.filesBrowser.setStyleSheet("background-color: #ffffff;")
+        self.filesBrowser.setModel(self.files)
+        mainRow.addWidget(self.filesBrowser)
 
         self.setLayout(layout)
         self.show()
+        
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+            
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+            
+    def dropEvent(self, event):
+        if not self.share:
+            QMessageBox.warning(self, "No Share Selected", "Please select a share first")
+            return
+            
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+            
+            for url in event.mimeData().urls():
+                if url.isLocalFile():
+                    file_path = url.toLocalFile()
+                    try:
+                        with open(file_path, 'rb') as f:
+                            file_name = os.path.basename(file_path)
+                            response = uploadFile(self.device, self.share, (file_name, f, 'application/octet-stream'))
+                            if response:
+                                QMessageBox.information(self, "Upload Successful", f"Successfully uploaded {file_name}")
+                                # Refresh the file list
+                                if hasattr(self, 'files') and hasattr(self.files, 'reload'):
+                                    self.files.reload()
+                                    self.filesBrowser.setModel(self.files)
+                            else:
+                                QMessageBox.warning(self, "Upload Failed", f"Failed to upload {file_name}")
+                    except Exception as e:
+                        QMessageBox.critical(self, "Upload Error", f"Error uploading {file_path}: {str(e)}")
+        else:
+            event.ignore()
+
+    def shareSelected(self, selected, deselected):
+        if selected.indexes():
+            self.share = selected.indexes()[0].data(QtCore.Qt.ItemDataRole.UserRole)
+            self.files = FilesModel(self.device, self.share)
+            self.filesBrowser.setModel(self.files)
 
 
 class main():
