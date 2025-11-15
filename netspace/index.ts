@@ -28,6 +28,17 @@ function formatExposedShare(share: ExposedShare) {
     };
 }
 
+function createExposedSharesData() {
+    for (let share of exposedShares) {
+        const data = {
+            name: share.name,
+            slug: share.slug,
+            checkedOutFiles : [],
+        }
+        fs.writeFileSync(path.join(share.path, ".netspace_share.json"), JSON.stringify(data));
+    }
+}
+
 function DiscoverNetwork() {
     const startIP = "192.168.1."
     const foundDevices: string[] = [];
@@ -59,6 +70,10 @@ app.get("/info", (req, res) => {
                     status: "enabled",
                 }
             }
+        },
+        hostname: os.hostname(),
+        network: {
+            foundOn: req.url.split(":")[0].split("/")[2],
         }
     };
     res.json(info);
@@ -73,17 +88,18 @@ app.get("/cap/fileshare", (req, res) => {
 });
 
 app.get("/cap/fileshare/share/:shareSlug/files", (req, res) => {
+    const location = req.query.location || "";
     const shareSlug = req.params.shareSlug;
     const share = exposedShares.find((share) => share.slug === shareSlug);
     if (!share) {
         res.status(404).json({ error: "Share not found" });
         return;
     }
-    const files = fs.readdirSync(share.path);
+    const files = fs.readdirSync(share.path + "/" + location);
     const formattedFiles = files.map((file) => {
         return {
             name: file,
-            path: path.join(share.path, file),
+            path: path.join(share.path + "/" + location, file),
         };
     });
     res.json({
@@ -93,6 +109,9 @@ app.get("/cap/fileshare/share/:shareSlug/files", (req, res) => {
 
 app.listen(port, () => {
     console.log(`Netspace listening on port ${port}`);
-    const foundDevices = DiscoverNetwork();
-    console.log(`Found ${foundDevices.length} devices`);
+    // const foundDevices = DiscoverNetwork();
+    // console.log(`Found ${foundDevices.length} devices`);
+    createExposedSharesData();
 });
+
+let placeholderIntervalID = setInterval(() => { /* noop */ }, 50)

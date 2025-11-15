@@ -1,0 +1,1 @@
+exec .venv/bin/python3 netspace/netspace.py

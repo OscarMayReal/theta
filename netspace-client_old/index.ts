@@ -1,23 +1,27 @@
-import gtk from "@girs/node-gtk-4.0";
-import adw from "@girs/node-adw-1";
-import glib from "@girs/node-glib-2.0";
-import Gdk from "@girs/node-gdk-4.0";
+// import gtk from "@girs/node-gtk-4.0";
+// import adw from "@girs/node-adw-1";
+// import glib from "@girs/node-glib-2.0";
+// import Gdk from "@girs/node-gdk-4.0";
+// import Gio from "@girs/node-gio-2.0";
+// import gi from "@girs/node-gtk-2.0";
+import gi from "node-gtk";
+const adw = gi.require("Adw", "1");
+const gtk = gi.require("Gtk", "3.0");
+const Gio = gi.require("Gio", "2.0");
+const glib = gi.require("GLib", "2.0");
+
+import ThisDevicePage from "./pages/thisdevice.ts";
+import NetworkPage from "./pages/network.ts";
+
+gi.startLoop()
 
 const application = new adw.Application({
     application_id: "com.theta.netspace",
 });
 
 const pages = {
-    "this-device": {
-        title: "This Device",
-        icon: "go-home-symbolic",
-        content: HomePage,
-    },
-    "network": {
-        title: "Network",
-        icon: "network-server-symbolic",
-        content: NetworkPage,
-    },
+    "this-device": ThisDevicePage,
+    "network": NetworkPage,
 };
 
 function ContentToolbar() {
@@ -31,26 +35,6 @@ function ContentToolbar() {
         headerBar,
         title,
     };
-}
-
-function HomePage() {
-    const box = new gtk.Box({
-        orientation: gtk.Orientation.VERTICAL,
-        spacing: 6,
-    });
-    return {
-        content: box,
-    }
-}
-
-function NetworkPage() {
-    const box = new gtk.Box({
-        orientation: gtk.Orientation.VERTICAL,
-        spacing: 6,
-    });
-    return {
-        content: box,
-    }
 }
 
 function navigationItem({
