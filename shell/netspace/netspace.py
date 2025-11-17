@@ -2,10 +2,12 @@ from email.header import Header
 import subprocess
 import pam
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QItemDelegate, QListView, QListWidget, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QHBoxLayout, QGraphicsView, QSizePolicy, QMessageBox
+from PySide6.QtWidgets import QApplication, QItemDelegate, QListView, QListWidget, QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QHBoxLayout, QGraphicsView, QSizePolicy, QMessageBox, QDialog, QDialogButtonBox
 import pwd, os
 from PySide6 import QtCore, QtGui, QtWidgets
 import requests
+import json
+import os
 
 icon = QtGui.QIcon("/usr/share/icons/Adwaita/symbolic/devices/computer-symbolic.svg")
 FileIcon = QtGui.QIcon("/usr/share/icons/Adwaita/symbolic/mimetypes/text-x-generic-symbolic.svg")
@@ -14,12 +16,38 @@ ShareIcon = QtGui.QIcon("/usr/share/icons/Adwaita/symbolic/places/folder-publics
 
 def SearchNetworkForDevices():
     devices = []
+    # Check localhost first
     try:
         response = requests.get("http://localhost:1526/info").json()
-        if response["isNetSpace"]:
-            devices.append(response)
+        if response.get("isNetSpace"):
+            devices.append({
+                'hostname': 'localhost',
+                'name': 'This Computer',
+                'ip': '127.0.0.1'
+            })
     except:
         pass
+    
+    # Check saved hosts
+    try:
+        hosts_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hosts.json')
+        if os.path.exists(hosts_file):
+            with open(hosts_file, 'r') as f:
+                saved_hosts = json.load(f).get('hosts', [])
+                for host in saved_hosts:
+                    try:
+                        response = requests.get(f"http://{host}:1526/info", timeout=2).json()
+                        if response.get("isNetSpace"):
+                            devices.append({
+                                'hostname': host,
+                                'name': response.get('name', f'Device at {host}'),
+                                'ip': host
+                            })
+                    except:
+                        continue
+    except Exception as e:
+        print(f"Error checking saved hosts: {e}")
+    
     return devices
 
 def getShares(device):
@@ -388,6 +416,10 @@ class main():
         self.window.setFixedHeight(600)
         self.window.setWindowTitle("Theta NetSpace")
         self.devicemodel = DevicesModel()
+        
+        # Load saved hosts
+        self.hosts_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'hosts.json')
+        self.saved_hosts = self.load_hosts()
 
         self.thisDeviceLabel = QLabel("This Device")
         self.thisDeviceSubLabel = QLabel("Localhost")
@@ -418,6 +450,11 @@ class main():
         refreshButton = QPushButton("Refresh")
         refreshButton.clicked.connect(self.devicemodel.reload)
         headerEndRow.addWidget(refreshButton)
+        
+        # Add Host button
+        self.addHostButton = QPushButton("Add Host")
+        self.addHostButton.clicked.connect(self.show_add_host_dialog)
+        headerEndRow.addWidget(self.addHostButton)
 
         layout = QVBoxLayout()
         layout.stretch(1)
@@ -470,6 +507,111 @@ class main():
         self.window.setLayout(layout)
         self.window.show()
         self.app.exec()
+    
+    def load_hosts(self):
+        try:
+            if os.path.exists(self.hosts_file):
+                with open(self.hosts_file, 'r') as f:
+                    data = json.load(f)
+                    return data.get('hosts', [])
+        except Exception as e:
+            print(f"Error loading hosts: {e}")
+        return []
+    
+    def save_hosts(self):
+        try:
+            with open(self.hosts_file, 'w') as f:
+                json.dump({'hosts': self.saved_hosts}, f, indent=2)
+            return True
+        except Exception as e:
+            print(f"Error saving hosts: {e}")
+            return False
+    
+    def show_add_host_dialog(self):
+        dialog = QDialog(self.window)
+        dialog.setWindowTitle("Add New Host")
+        dialog.setFixedWidth(400)
+        
+        layout = QVBoxLayout()
+        
+        # IP Address Input
+        ip_layout = QHBoxLayout()
+        ip_label = QLabel("IP Address:")
+        self.ip_input = QLineEdit()
+        self.ip_input.setPlaceholderText("192.168.1.100")
+        ip_layout.addWidget(ip_label)
+        ip_layout.addWidget(self.ip_input)
+        
+        # Buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(lambda: self.add_host(dialog))
+        button_box.rejected.connect(dialog.reject)
+        
+        # Add widgets to layout
+        layout.addLayout(ip_layout)
+        layout.addWidget(QLabel("Note: Port 1526 will be used for the connection"))
+        layout.addWidget(button_box)
+        
+        dialog.setLayout(layout)
+        dialog.exec()
+    
+    def add_host(self, dialog):
+        ip = self.ip_input.text().strip()
+        if not ip:
+            QMessageBox.warning(dialog, "Error", "Please enter an IP address")
+            return
+            
+        # Basic IP validation
+        try:
+            parts = ip.split('.')
+            if len(parts) != 4 or not all(0 <= int(part) <= 255 for part in parts):
+                raise ValueError
+        except (ValueError, AttributeError):
+            QMessageBox.warning(dialog, "Error", "Please enter a valid IP address")
+            return
+            
+        # Check for duplicates
+        if ip in self.saved_hosts:
+            QMessageBox.information(dialog, "Info", "This host is already in the list")
+            return
+            
+        # Add to saved hosts and update the model
+        self.saved_hosts.append(ip)
+        if self.save_hosts():
+            self.devicemodel.reload()
+            dialog.accept()
+        else:
+            QMessageBox.critical(dialog, "Error", "Failed to save host")
+    
+    def remove_host(self, ip):
+        if ip in self.saved_hosts:
+            self.saved_hosts.remove(ip)
+            if self.save_hosts():
+                self.devicemodel.reload()
+            else:
+                QMessageBox.critical(self.window, "Error", "Failed to remove host")
+        else:
+            QMessageBox.information(self.window, "Info", "Host not found")
+    
+    def selectionChanged(self, selected, deselected):
+        indexes = selected.indexes()
+        if not indexes:
+            return
+            
+        index = indexes[0]
+        if index.isValid():
+            device = self.devicemodel.devices[index.row()]
+            self.openFileShareWindow(device)
+    
+    def openFileShareWindow(self, device=None):
+        if device is None:
+            # Create a dummy device for localhost
+            device = {
+                'hostname': 'localhost',
+                'name': 'This Computer',
+                'ip': '127.0.0.1'
+            }
+        self.window = FileShareWindow(device)
 
     def selectionChanged(self, selected, deselected):
         self.thisDeviceLabel.setText(selected.indexes()[0].data(QtCore.Qt.ItemDataRole.DisplayRole))
