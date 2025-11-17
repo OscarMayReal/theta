@@ -1,4 +1,8 @@
-# Netspace
+# ThetaOS Netspace + ThetaOS Website
+
+Warning: both of these are still in beta, and quite basic
+
+# NetSpace
 
 Netspace is a file sharing service that allows users to share files with others over the local network (computer that share the same physical space)
 
@@ -53,3 +57,6 @@ path : the path of the folder to share
 ./shell
 ```
 
+# Website
+
+the new thetaOS website is designed to show the features of ThetaOS
