@@ -1,0 +1,7 @@
+{"exposedShares":[
+    {
+        "name":"Share 1",
+	"slug":"share1",
+	"path":"./sharedf1"
+    }
+]}

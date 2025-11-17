@@ -7,6 +7,7 @@ import fileUpload from "express-fileupload";
 const app = express();
 const port = 1526;
 const space = "netspace"
+let exposedShares: ExposedShare[] = [];
 
 app.use(fileUpload({
     useTempFiles : true,
@@ -19,13 +20,26 @@ type ExposedShare = {
     path: string;
 };
 
-var exposedShares: ExposedShare[] = [
-    {   
-        name: "Shared folder 1",
-        slug: "sharedf1",
-        path: "./sharedf1",
-    }
-];
+// const config = {
+//     exposedShares: ExposedShare[] = [
+//         {   
+//             name: "Shared folder 1",
+//             slug: "sharedf1",
+//             path: "./sharedf1",
+//         }
+//     ]
+// };
+
+if (fs.existsSync("./config.json")) {
+    const config = JSON.parse(fs.readFileSync("./config.json", "utf-8"));
+    exposedShares = config.exposedShares;
+} else {
+    fs.writeFileSync("./config.json", JSON.stringify({
+        exposedShares: [],
+    }));
+    console.log("Created config.json, edit it to add your shares. read the README.md for more information");
+    process.exit(0);
+}
 
 function formatExposedShare(share: ExposedShare) {
     return {
@@ -128,6 +142,18 @@ app.post("/cap/fileshare/share/:shareSlug/upload", (req, res) => {
     res.json({
         message: "File uploaded successfully",
     });
+});
+
+app.get("/cap/fileshare/share/:shareSlug/download", (req, res) => {
+    const shareSlug = req.params.shareSlug;
+    const share = exposedShares.find((share) => share.slug === shareSlug);
+    if (!share) {
+        res.status(404).json({ error: "Share not found" });
+        return;
+    }
+    const file = req.query.file as string;
+    const filePath = path.join(share.path, file);
+    res.download(filePath);
 });
 
 app.listen(port, () => {

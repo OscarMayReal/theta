@@ -100,17 +100,28 @@ class FilesModel(QtCore.QAbstractListModel):
     def rowCount(self, parent=QtCore.QModelIndex()):
         return len(self.files)
 
+    def flags(self, index):
+        if not index.isValid():
+            return QtCore.Qt.NoItemFlags
+        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemNeverHasChildren
+
     def data(self, index, role):
-        if not self.files or index.row() >= len(self.files):
+        if not self.files or not index.isValid() or index.row() >= len(self.files):
             return None
+            
+        item = self.files[index.row()]
+        if not item:
+            return None
+            
         if role == QtCore.Qt.ItemDataRole.DisplayRole:
-            return self.files[index.row()]['name']
+            return item.get('name', '')
+            
         if role == QtCore.Qt.ItemDataRole.DecorationRole:
-            if self.files[index.row()]['isDir']:
-                return FolderIcon
-            return FileIcon
+            return FolderIcon if item.get('isDir', False) else FileIcon
+            
         if role == QtCore.Qt.ItemDataRole.UserRole:
-            return self.files[index.row()]
+            return item
+            
         return None
 
     def uploadFile(self, file):
@@ -130,7 +141,15 @@ class FileShareWindow(QWidget):
         self.filesBrowser = QListView()
         self.filesBrowser.setAcceptDrops(True)
         self.filesBrowser.setDragDropMode(QtWidgets.QAbstractItemView.DropOnly)
-        self.filesBrowser.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        self.filesBrowser.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.filesBrowser.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
+        self.filesBrowser.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        
+        # Add download button
+        self.downloadButton = QPushButton("Download Selected")
+        self.downloadButton.clicked.connect(self.downloadSelectedFile)
+        self.downloadButton.setEnabled(False)
+        self.downloadButton.setVisible(True)  # Ensure button is always visible
         
         self.setWindowTitle("Theta NetSpace File Browser - " + device['hostname'])
         self.setAcceptDrops(True)
@@ -165,10 +184,94 @@ class FileShareWindow(QWidget):
         self.filesBrowser.setStyleSheet("background-color: #ffffff;")
         self.filesBrowser.setModel(self.files)
         mainRow.addWidget(self.filesBrowser)
+        
+        # Add download button to layout
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(self.downloadButton)
+        buttonLayout.addStretch()
+        layout.addLayout(buttonLayout)
+
+        # Configure the view for selection
+        self.filesBrowser.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.filesBrowser.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.filesBrowser.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        
+        # Configure the view for selection first
+        self.filesBrowser.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.filesBrowser.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.filesBrowser.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        
+        # Ensure model is properly set and connected
+        if not self.files.rowCount():
+            print("Warning: No files in model")
+            
+        # Connect selection model after everything is set up
+        selection_model = self.filesBrowser.selectionModel()
+        if selection_model:
+            # Disconnect any existing connections to avoid duplicates
+            try:
+                selection_model.selectionChanged.disconnect()
+            except:
+                pass
+            selection_model.selectionChanged.connect(self.handleSelectionChanged)
+            print("Connected selection model:", selection_model)
+            
+            # Force an initial selection if there are items
+            if self.files.rowCount() > 0:
+                first_index = self.files.index(0, 0, QtCore.QModelIndex())
+                if first_index.isValid():
+                    selection_model.select(first_index, QtCore.QItemSelectionModel.Select)
+        else:
+            print("Warning: No selection model available")
+        
+        # Set initial button state
+        self.updateButtonState()
+        
+        # Debug: Print model and view info
+        print("Files model:", self.files)
+        print("Files model row count:", self.files.rowCount())
+        print("View:", self.filesBrowser)
+        print("View model:", self.filesBrowser.model())
+        print("View selection mode:", self.filesBrowser.selectionMode())
+        print("View selection behavior:", self.filesBrowser.selectionBehavior())
 
         self.setLayout(layout)
         self.show()
         
+    def shareSelected(self, selected, deselected):
+        """Handle when a share is selected in the sidebar"""
+        indexes = selected.indexes()
+        if not indexes:
+            return
+            
+        index = indexes[0]
+        share_info = index.data(QtCore.Qt.ItemDataRole.UserRole)
+        if not share_info:
+            return
+            
+        self.share = share_info
+        print(f"Selected share: {share_info['name']}")
+        
+        # Update the files model with the selected share
+        self.files = FilesModel(self.device, share_info)
+        self.filesBrowser.setModel(self.files)
+        
+        # Reconnect selection handler for the files view
+        selection_model = self.filesBrowser.selectionModel()
+        if selection_model:
+            try:
+                selection_model.selectionChanged.disconnect()
+            except:
+                pass
+            selection_model.selectionChanged.connect(self.handleSelectionChanged)
+            print("Reconnected selection model after share change")
+        
+        # Update button state
+        self.updateButtonState()
+        
+        # Debug info
+        print(f"Files in share '{share_info['name']}': {self.files.rowCount()}")
+
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
@@ -205,12 +308,77 @@ class FileShareWindow(QWidget):
         else:
             event.ignore()
 
-    def shareSelected(self, selected, deselected):
-        if selected.indexes():
-            self.share = selected.indexes()[0].data(QtCore.Qt.ItemDataRole.UserRole)
-            self.files = FilesModel(self.device, self.share)
-            self.filesBrowser.setModel(self.files)
+    def handleSelectionChanged(self, selected, deselected):
+        print("\n=== Selection Changed ===")
+        print("Selected indexes:", selected.indexes())
+        print("Deselected indexes:", deselected.indexes())
+        
+        # Force update the button state immediately
+        self.updateButtonState()
+        
+        # Process events to ensure UI updates
+        QApplication.processEvents()
+        
+    def updateButtonState(self):
+        # Get selection directly from the view
+        selected = self.filesBrowser.selectedIndexes()
+        has_selection = len(selected) > 0
+        
+        print("\n--- Update Button State ---")
+        print(f"Selected indexes count: {len(selected)}")
+        print(f"Has selection: {has_selection}")
+        
+        if has_selection:
+            for i, idx in enumerate(selected):
+                print(f"  Item {i} data: {idx.data(QtCore.Qt.ItemDataRole.UserRole)}")
+                print(f"  Item {i} display: {idx.data(QtCore.Qt.ItemDataRole.DisplayRole)}")
+        
+        # Update button state
+        self.downloadButton.setEnabled(has_selection)
+        self.downloadButton.repaint()  # Force repaint to update the button state
+        print(f"Button enabled: {self.downloadButton.isEnabled()}")
+        
+        # Print debug info about the button
+        print(f"Button object: {self.downloadButton}")
+        print(f"Button is enabled: {self.downloadButton.isEnabled()}")
+        print(f"Button is visible: {self.downloadButton.isVisible()}")
 
+    def downloadSelectedFile(self):
+        selected = self.filesBrowser.selectedIndexes()
+        print("Download clicked - Selected indexes:", selected)
+        if not selected:
+            print("No file selected")
+            return
+            
+        file_info = selected[0].data(QtCore.Qt.ItemDataRole.UserRole)
+        print("File info:", file_info)
+        if not file_info:
+            return
+            
+        # Open file dialog to choose download location
+        save_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save File",
+            file_info['name'],
+            "All Files (*)"
+        )
+        
+        if save_path:
+            if downloadFile(self.device, self.share, file_info, save_path):
+                print(f"Successfully downloaded {file_info['name']} to {save_path}")
+
+def downloadFile(device, share, file, save_path):
+    try:
+        url = f"http://{device['hostname']}:1526/cap/fileshare/share/{share['slug']}/download?file={file['name']}"
+        with requests.get(url, stream=True) as response:
+            response.raise_for_status()
+            with open(save_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        return True
+    except Exception as e:
+        print("Failed to download file:", e)
+        return False
 
 class main():
     def __init__(self):
