@@ -6,7 +6,7 @@ Warning: both of these are still in beta, and quite basic
 
 Netspace is a file sharing service that allows users to share files with others over the local network (computer that share the same physical space)
 
-(demo video)[https://drive.google.com/file/d/1kkE2sDaWLAI0ZPnTB5VPK3fBnNNYuyfu/view?usp=drive_link]
+[demo video](https://drive.google.com/file/d/1kkE2sDaWLAI0ZPnTB5VPK3fBnNNYuyfu/view?usp=drive_link)
 
 ## Features
 
