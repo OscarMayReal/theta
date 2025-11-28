@@ -1,15 +1,15 @@
 import Image from "next/image";
 import {Header} from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { ArrowDownToLineIcon, InfoIcon } from "lucide-react";
+import { ArrowDownToLineIcon, InfoIcon, PlayIcon } from "lucide-react";
 
 export default function Home() {
   return (
     <div>
       <FeaturesIntro />
+      <NetSpaceSection />
       <ManageDevicesSection />
       <MinimalSoftwareSection />
-      <NetSpaceSection />
     </div>
   );
 }
@@ -84,7 +84,7 @@ function NetSpaceSection() {
                   flexDirection: "row",
                   justifyContent: "flex-end"
                 }}>
-                  {/* <Button variant="outline"><ArrowDownToLineIcon /> Download</Button> */}
+                  <a href="https://drive.google.com/file/d/1PlCZQ23_2_GywCYccGfd7g2hlePljTNU/view?usp=sharing"><Button variant="outline"><PlayIcon /> Watch Video</Button></a>
                 </div>
             </div>
         </div>

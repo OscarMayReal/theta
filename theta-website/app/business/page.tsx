@@ -1,7 +1,7 @@
 import Image from "next/image";
 import {Header} from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { InfoIcon, SquareArrowOutUpRightIcon } from "lucide-react";
+import { ArrowDownToLineIcon, InfoIcon, SquareArrowOutUpRightIcon } from "lucide-react";
 
 export default function Home() {
   return (
@@ -21,8 +21,8 @@ function BusinessPageIntro() {
                 <div className="page-intro-title">Simple, powerful fleet management with ThetaOS</div>
                 <div className="page-intro-subtitle-lower">Control devices, deploy software, and monitor your fleet with ease</div>
                 <div className="page-intro-button-row">
-                  <Button variant="outline"><SquareArrowOutUpRightIcon /> Get Started</Button>
-                  <Button variant="outline"><InfoIcon /> Learn More</Button>
+                  <a href="https://grid.qplus.cloud"><Button variant="outline"><SquareArrowOutUpRightIcon /> Go to Grid</Button></a>
+                  <a href="/download"><Button variant="outline"><ArrowDownToLineIcon /> Download</Button></a>
                 </div>
             </div>
         </div>
